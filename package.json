@@ -1,0 +1,65 @@
+{
+  "name": "amasbackend",
+  "version": "1.0.0",
+  "description": "- npm init -y // crea un proyecto pakage.json - npm i typescript -D // -D indica que es una dependencia solo para desarrollo - npx tsc --init  // iniciar proyecto typescrip - npm i express  // instalar express frame para server  - npm i @types/express -D //  instala los tipos para express  - npm i nodemon -D  // instala nodemon para que se actualice el codigo con cada cambio  - npm i morgan  // instalar morgan para informacion en consola de las peticiones  - npm i @types/morgan -D // instalar types de morgan para desarrollo - npm i mongoose   // instala modulo para la base de datos - npm i @types/mongoose -D  // instalar types de mongoose para desarrollo - npm i multer  // modulo para poder subir archivos con node - npm i @types/multer -D  // instalar types de multer para desarrollo",
+  "main": "index.js",
+  "scripts": {
+    "start": "node dist/index.js",
+    "dev": "tsc-watch --onSuccess \"node dist/index.js\" ",
+    "build": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mavelasquezgi/amassBackendBaseOn.git"
+  },
+  "author": "mavelasquezgi",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mavelasquezgi/amassBackendBaseOn/issues"
+  },
+  "homepage": "https://github.com/mavelasquezgi/amassBackendBaseOn#readme",
+  "dependencies": {
+    "@types/mongoose": "^5.11.97",
+    "bcrypt": "^6.0.0",
+    "btoa": "^1.2.1",
+    "buffer": "^6.0.3",
+    "cors": "^2.8.5",
+    "date-fns": "^4.1.0",
+    "express": "^4.21.2",
+    "express-async-errors": "^3.1.1",
+    "fs": "^0.0.1-security",
+    "jsonwebtoken": "^9.0.2",
+    "mkdirp": "^3.0.1",
+    "mongoose": "^8.18.2",
+    "morgan": "^1.10.1",
+    "multer": "^2.0.2",
+    "natural": "^8.1.0",
+    "nodemailer": "^7.0.6",
+    "nodemailer-smtp-transport": "^2.4.2",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
+    "pdfmake": "^0.2.20",
+    "unidecode": "^1.1.0",
+    "winston": "^3.17.0",
+    "winston-daily-rotate-file": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/btoa": "^1.2.5",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/mkdirp": "^2.0.0",
+    "@types/morgan": "^1.9.10",
+    "@types/multer": "^2.0.0",
+    "@types/natural": "^6.0.1",
+    "@types/nodemailer": "^7.0.1",
+    "@types/nodemailer-smtp-transport": "^2.7.8",
+    "@types/passport": "^1.0.17",
+    "@types/passport-jwt": "^4.0.1",
+    "@types/pdfmake": "^0.2.11",
+    "@types/unidecode": "^1.1.0",
+    "tsc-watch": "^7.1.1",
+    "typescript": "^5.9.2"
+  }
+}

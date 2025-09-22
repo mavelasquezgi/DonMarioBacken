@@ -1,0 +1,44 @@
+services:
+
+  # Base de datos PostgreSQL para Traccar
+  postgres:
+    image: postgres:12.18-alpine
+    container_name: postgres
+    restart: unless-stopped
+    volumes:
+      - /disk1/amas/postgres/data:/var/lib/postgresql/data:rw  # Persistencia de datos en el host
+    environment:
+      - POSTGRES_DB=traccar  # Base de datos para Traccar
+      - POSTGRES_USER=traccar  # Usuario para la base de datos
+      - POSTGRES_PASSWORD=traccarpassword  # Contraseña del usuario
+    networks:
+      - web  # Conectado a la red web
+
+  # Servicio Traccar para seguimiento de GPS
+  traccar:
+    image: traccar/traccar:6-alpine
+    container_name: traccar
+    hostname: traccar
+    restart: unless-stopped
+    environment:
+      - VIRTUAL_HOST=seguimiento.amass.com.co  # Host virtual para nginx-proxy
+      - LETSENCRYPT_HOST=seguimiento.amass.com.co  # Dominio para el certificado SSL
+      - LETSENCRYPT_EMAIL=soporteti@amass.com.co  # Correo para el certificado SSL
+      - VIRTUAL_PORT=8082  # Puerto donde corre Traccar
+    ports:
+      - "8062:8082"  # Mapea el puerto interno 8082 al 8062 en el host
+      - "5000-5150:5000-5150"  # Mapeo de puertos UDP para comunicación GPS
+      - "5000-5150:5000-5150/udp"  # Mapeo de puertos UDP para comunicación GPS
+    volumes:
+      # Directorios montados para logs y configuración de Traccar
+      - /disk1/amas/traccar/logs:/opt/traccar/logs:rw
+      - /disk1/amas/traccar/traccar-config/traccar.xml:/opt/traccar/conf/traccar.xml:ro
+    depends_on:
+      - postgres  # Espera a que PostgreSQL esté listo antes de iniciar
+    networks:
+      - web  # Conectado a la red web
+
+# Definición de la red web para interconectar los servicios
+networks:
+  web:
+    external: true

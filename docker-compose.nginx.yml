@@ -1,0 +1,44 @@
+# docker-compose.proxy.yml
+version: '3.8'
+
+services:
+  # Proxy inverso para gestionar solicitudes HTTP/HTTPS
+  nginx-proxy:
+    image: nginxproxy/nginx-proxy
+    container_name: nginx-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /disk4/nginx/conf:/etc/nginx/conf.d
+      - /disk4/nginx/vhost.d:/etc/nginx/vhost.d
+      - /disk4/nginx/html:/usr/share/nginx/html
+      - /disk4/nginx/certs:/etc/nginx/certs:ro
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    networks:
+      - web
+
+  # Servicio de companion para certificados SSL
+  acme-companion:
+    image: nginxproxy/acme-companion
+    container_name: nginx-proxy-acme
+    restart: unless-stopped
+    environment:
+      - DEFAULT_EMAIL=soporteti@amass.com.co
+    volumes_from:
+      - nginx-proxy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /disk4/nginx/certs:/etc/nginx/certs:rw
+      - /disk4/nginx/vhost.d:/etc/nginx/vhost.d
+      - /disk4/nginx/html:/usr/share/nginx/html
+      - /disk4/nginx/acme:/etc/acme.sh
+    networks:
+      - web
+
+networks:
+  web:
+    external: true
+
+# docker-compose -f docker-compose.nginx.yml up -d

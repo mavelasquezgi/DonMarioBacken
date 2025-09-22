@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+
+  # Base de datos MongoDB para el servicio AMAS
+  database:
+    image: mongo:6.0.6
+    restart: always
+    ports:
+      - 127.0.0.1:27017:27017  # Puerto local para acceder a MongoDB
+    volumes:
+      - /disk4/amas/database:/data/db  # Persistencia de datos en el host
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=amasMaster  # Usuario administrador inicial
+      - MONGO_INITDB_ROOT_PASSWORD=*AmAsMaStErFiRst1  # Contraseña del usuario administrador
+    command: --auth  # Habilitar autenticación en MongoDB
+    networks:
+      - web  # Conectado a la red web
+
+  # Backend del sistema AMAS
+  amasbackend:
+    image: amasbackend
+    restart: on-failure:10  # Reiniciar hasta 10 veces en caso de fallo
+    build: .  # Construir desde el Dockerfile en el contexto actual
+    command: node ./dist/index.js  # Comando para ejecutar el backend
+    expose:
+      - "3500"  # Exponer el puerto 3500 para acceso interno
+    environment:
+      - VIRTUAL_HOST=amass.com.co  # Host virtual para nginx-proxy
+      - LETSENCRYPT_HOST=amass.com.co  # Dominio para el certificado SSL
+      - LETSENCRYPT_EMAIL=soporteti@amass.com.co  # Correo para el certificado SSL
+      - VIRTUAL_PORT=3500  # Puerto interno del backend
+      - VIRTUAL_PATH=/api  # Ruta donde el backend será accesible
+    volumes:
+      # Directorios montados para almacenamiento de imágenes, PDFs, scripts, etc.
+      - /disk4/amas/imagesProducts:/home/imagesProducts
+      - /disk4/amas/imagesMarks:/home/imagesMarks
+      - /disk4/amas/imagesCategories:/home/imagesCategories
+      - /disk4/amas/supportsPayments:/home/supportsPayments
+      - /disk4/amas/pdfQuotes:/home/pdfQuotes
+      - /disk4/amas/pdfPreOrder:/home/pdfPreOrder
+      - /disk4/amas/pdfOrder:/home/pdfOrder
+      - /disk4/amas/files:/home/files
+      - /disk4/amas/temp:/home/temp
+      - /disk4/amas/scripts/pythonScripts:/home/scripts/pythonScripts
+    depends_on:
+      - database  # Espera a que la base de datos esté lista antes de iniciar
+    networks:
+      - web  # Conectado a la red web
+
+  # Frontend del sistema AMAS
+  amasfront:
+    image: amasfront
+    restart: always
+    build: /disk1/amas/amasFrontendPlatform  # Construir desde el directorio especificado
+    expose:
+      - "8080"  # Exponer el puerto 8080 para acceso interno
+    environment:
+      - VIRTUAL_HOST=amass.com.co  # Host virtual para nginx-proxy
+      - LETSENCRYPT_HOST=amass.com.co  # Dominio para el certificado SSL
+      - LETSENCRYPT_EMAIL=soporteti@amass.com.co  # Correo para el certificado SSL
+      - VIRTUAL_PORT=8080  # Puerto interno del frontend
+      - VIRTUAL_PATH=/  # Ruta raíz para el frontend
+    networks:
+      - web  # Conectado a la red web
+
+# Definición de la red web para interconectar los servicios
+networks:
+  web:
+    external: true

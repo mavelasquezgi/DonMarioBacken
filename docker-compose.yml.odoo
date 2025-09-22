@@ -1,0 +1,37 @@
+version: '3.7'
+
+services:
+  db:
+    image: postgres:16.4
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=odoo
+      - POSTGRES_PASSWORD=o21rLN&M1gd
+    volumes:
+      - /disk4/odoo/odoo-db-data:/var/lib/postgresql/data
+    networks:
+      - web
+
+  odoo:
+    image: odoo:17.0
+    depends_on:
+      - db
+    ports:
+      - "8069:8069"
+    environment:
+      - HOST=db
+      - USER=odoo
+      - PASSWORD=o21rLN&M1gd
+      - VIRTUAL_HOST=odoo.amass.com.co  # Host virtual para nginx-proxy
+      - LETSENCRYPT_HOST=odoo.amass.com.co  # Dominio para el certificado SSL
+      - LETSENCRYPT_EMAIL=soporteti@amass.com.co  # Correo para el certificado SSL
+      - VIRTUAL_PORT=8069  # Puerto donde corre el servicio
+    volumes:
+      - /disk4/odoo/odoo-web-data/:/var/lib/odoo
+      - /disk4/odoo/config/:/etc/odoo
+    networks:
+      - web
+
+networks:
+  web:
+    external: true

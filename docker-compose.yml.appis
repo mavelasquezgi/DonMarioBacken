@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+
+  # Backend del sistema APPIS
+  appisbackend:
+    image: appisbackend
+    restart: on-failure:10  # Reiniciar hasta 10 veces en caso de fallo
+    build: /disk1/appis/AppisBackend  # Construir desde el directorio especificado
+    command: node ./dist/index.js  # Comando para ejecutar el backend
+    expose:
+      - "3400"  # Exponer el puerto 3400 para acceso interno
+    environment:
+      - VIRTUAL_HOST=appis.com.co  # Host virtual para nginx-proxy
+      - LETSENCRYPT_HOST=appis.com.co  # Dominio para el certificado SSL
+      - LETSENCRYPT_EMAIL=soporteti@amass.com.co  # Correo para el certificado SSL
+      - VIRTUAL_PORT=3400  # Puerto interno del backend
+      - VIRTUAL_PATH=/api  # Ruta donde el backend será accesible
+    volumes:
+      # Directorios montados para almacenamiento de archivos, solicitudes, soportes, etc.
+      - /disk4/APPIS_Act:/home/node1
+      - /disk4/APPIS_Request:/home/node2
+      - /disk4/APPIS_Request_Professor:/home/requestprofessors
+      - /disk4/APPIS_SupportsRequest:/home/node3
+      - /disk4/APPIS_SupportsRequest_Professor:/home/supportrequestprofessors
+      - /disk4/APPIS_Office:/home/node4
+      - /disk4/APPIS_Office_Professor:/home/officeprofesor
+      - /disk4/APPIS_Administrative_Act:/home/administrativeact
+      - /disk4/APPIS_Administrative_Act_Professor:/home/administrativeactprofessor
+      - /disk4/APPIS_Temp:/home/temp
+      - /disk4/APPIS_Files:/home/files
+    networks:
+      - web  # Conectado a la red web
+
+  # Frontend del sistema APPIS
+  appisfrontend:
+    image: appisfrontend
+    build: /disk1/appis/AppisFrontend  # Construir desde el directorio especificado
+    restart: always
+    expose:
+      - "8085"  # Exponer el puerto 8085 para acceso interno
+    environment:
+      - VIRTUAL_HOST=appis.com.co  # Host virtual para nginx-proxy
+      - LETSENCRYPT_HOST=appis.com.co  # Dominio para el certificado SSL
+      - LETSENCRYPT_EMAIL=soporteti@amass.com.co  # Correo para el certificado SSL
+      - VIRTUAL_PORT=8085  # Puerto interno del frontend
+      - VIRTUAL_PATH=/  # Ruta raíz para el frontend
+    networks:
+      - web  # Conectado a la red web
+
+# Definición de la red web para interconectar los servicios
+networks:
+  web:
+    external: true

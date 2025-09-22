@@ -1,0 +1,546 @@
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjYzZjc5ODllNWI0ODAyN2NhYzI3NzRkZiIsInJvbGUiOiJBZG1pbiIsInVzZXJuYW1lIjoiTWF1cmljaW8gVmVsYXNxdWV6IEdpcmFsZG8iLCJpYXQiOjE3NTAzMzkzOTYsImV4cCI6MTc1MDUxMjE5NiwiYXVkIjoiNjNmNzk4OWU1YjQ4MDI3Y2FjMjc3NGRmIiwiaXNzIjoiYW1hc3MuY29tLmNvIn0.51Mn5IGZevkATES2Dn6e2prG897cwjhbDX6EIMUl5ik
+@tokenNotLog = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6eyJ1c2VybmFtZSI6IkFtYXMiLCJwYXNzd29yZCI6IlFXMWhjM01xUVdSdGFXND0iLCJhY3Rpb24iOiJ0b2tlbiJ9LCJpYXQiOjE3NDM3Nzg3MjgsImV4cCI6MTc0Mzc3OTYyOCwiYXVkIjoiW29iamVjdCBPYmplY3RdIiwiaXNzIjoiYW1hc3MuY29tLmNvIn0.Asp9FWQWRyrMiOqRJqgNJFjLIjSJDbyg57dy7wglfgk
+
+@createdAt = {{$datetime iso8601}}
+@dateFormat = {{$datetime "YYYY-MM-DD_hh:mm"}}
+
+@urlLocal = http://localhost:3500/api
+
+@locationId = 648280a3efa4177f4e8453dc
+@companyId = 68163f36e0c12e98ecb5ce93
+@productId = 6410dbd0870d3d2ed539d339
+@productEntryId = 6816401ee0c12e98ecb5cebe
+@productTransferId = 680fe1365b7acdb3088ab04a
+@limit = 5 
+@idClient = 67ec3fdd0a0eddfbc0dfc024
+
+###
+GET  {{urlLocal}}/confirmation/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY0MTA5MzAxNTBlYzRlNGZjM2MyYTQxNyIsImlhdCI6MTY3ODgwNzgwOSwiZXhwIjoxNjc4ODE4NjA5LCJhdWQiOiI2NDEwOTMwMTUwZWM0ZTRmYzNjMmE0MTciLCJpc3MiOiJhbWFzcy5jb20uY28ifQ.S0uFlpDQuHCOrcTHRMV8Kn65eOF3c-e5ULgm1gT9Uz0
+
+
+###
+POST {{urlLocal}}/tokenNotLogin
+Content-Type: application/json
+
+{
+	"username":"Amas",
+    "password": "QW1hc3MqQWRtaW4=",
+    "action": "token"
+}
+
+###
+POST {{urlLocal}}/signin
+Content-Type: application/json
+
+{
+	"email":"mavelasquezgi@unal.edu.co",
+    "password": "Amass*Admin",
+    "role": ["Admin"]
+}
+
+###
+GET {{urlLocal}}/productsByName/limas/Manizales%20-%20Caldas
+Content-Type: application/json
+
+###
+GET {{urlLocal}}/products/Manizales%20-%20Caldas
+Content-Type: application/json
+
+###
+POST {{urlLocal}}/productsByListIds/Manizales%20-%20Caldas
+Content-Type: application/json
+
+{
+	"listIds":{"6654b4b7d41d436188bd13d2": "1"}
+}
+
+###
+GET {{urlLocal}}/productsById/6679c153567f1f2734d63d9f/Manizales%20-%20Caldas
+Content-Type: application/json
+
+###
+GET {{urlLocal}}/product/67e335096402bf17740c731f
+Content-Type: application/json
+
+###
+POST {{urlLocal}}/deleteProduct
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+    "deleted": true,
+    "id": "67e335096402bf17740c731f"
+}
+
+###
+GET {{urlLocal}}/quotePdf/63f93dfdd02202aa38a7a72d
+Content-Type: application/json
+
+###
+GET {{urlLocal}}/getClientsDebtSummary
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+###
+GET {{urlLocal}}/getUnpaidInvoices?idUser={{idClient}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+###
+GET {{urlLocal}}/products
+Content-Type: application/json
+
+###
+GET {{urlLocal}}/stores
+Content-Type: application/json
+
+###
+GET {{urlLocal}}/storesNames
+Content-Type: application/json
+
+###
+POST {{urlLocal}}/signup
+Content-Type: application/json
+tokenbyaccesss: Bearer {{tokenNotLog}}
+
+{
+	"documentType": "C.C.",
+    "document": 1234567,
+    "names": "Mauricio",
+    "lastnames": "Velasquez Giraldo",
+    "password": "Amass*Admin",
+    "password2": "Amass*Admin",
+    "email": "ninefoxfire9@gmail.com",
+    "phone": 1234567,
+    "department": "Caldas",
+    "city": "Manizales",
+    "address": "Cra 22 #46c - 12",
+    "gender": "M",
+    "role": "Customer" 
+}
+
+###
+POST {{urlLocal}}/updateUser
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "id": "63d6da0942332301de627de4",
+	"documentType": "C.C",
+    "document": 123456723,
+    "password": "Amass*Admin",
+    "password2": "Amass*Admin",
+    "fullname": "AdminAmass",
+    "email": "mavelasquezgi@unal.edu.co",
+    "phone": 1234567,
+    "address": "Cra 22 #46c - 12",
+    "role": "Admin" 
+}
+
+###
+POST {{urlLocal}}/changepassword
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+	"currentPassword":"Amass*Admin2",
+    "newPassword":  "Amass*Admin"
+}
+
+### 
+GET {{urlLocal}}/cities
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 
+GET {{urlLocal}}/listUsers
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### param object id 
+GET {{urlLocal}}/product/60ff08679da69f15ba2dd742
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 
+GET {{urlLocal}}/productsAll
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 
+GET {{urlLocal}}/productsAdmin?page=1&quantity=10&name=brochas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 
+GET {{urlLocal}}/productsByCategory/Test
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 
+POST {{urlLocal}}/productsFeatured/Manizales%20-%20Caldas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "quantity": 5,
+    "page":2,
+    "previous": 0
+}
+
+### 
+POST {{urlLocal}}/productsFeatured/Manizales%20-%20Caldas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "quantity": 5,
+    "page":360,
+    "previous": 2
+}
+
+###
+POST {{urlLocal}}/createCategory
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "name": "Laminas",
+    "description": "Laminas para, placas"
+}
+
+###
+POST {{urlLocal}}/updateCategory
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "name": "Laminas",
+    "description": "Laminas, placas",
+    "state": "INACTIVE"
+}
+
+### 
+GET {{urlLocal}}/categories
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### 
+GET {{urlLocal}}/categoriesAll
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+###
+GET {{urlLocal}}/getstatescountry/Colombia
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### /citiesByDepartment/:country/:state
+GET {{urlLocal}}/countryStates/Colombia
+Content-Type: application/json
+
+### /citiesByDepartment/:country/:state
+GET {{urlLocal}}/citiesByDepartment/Colombia/Caldas
+Content-Type: application/json
+
+###
+POST {{urlLocal}}/createDepartment
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "id" : 0,
+    "state" : "Amazonas",
+    "country" : "Colombia",
+    "cities" : [
+            "Leticia",
+            "Puerto Nariño"
+    ] 
+}
+
+### get file
+GET {{urlLocal}}/getFile/imgProduct/bm90RXhpc3RzMi5wbmc=
+
+###
+GET {{urlLocal}}/getFile/product/TlRJeFh6RTJOemsxTXpRM056SXlOVGRmUjJWdVpYSmhkR1ZrWHpJd01qTXRNRE10TWpKZk1qQTZNalk2TVRJdWNHNW4%3D
+
+###
+POST {{urlLocal}}/createLineCategory
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "name" : "Construcción y ferreteria",
+    "description" : "Construcción y ferreteria",
+    "nameIcon" : "Colombia"
+}
+
+### pdf products filtered
+GET {{urlLocal}}/productsByFilter/pdfProductsFiltered/catalogo
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+
+###
+# 1. Create a New Location (POST /locations)
+# Requires a valid Product ID to link to.
+POST {{urlLocal}}/createLocation
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+    "location": "Pensilvania - Caldas",
+    "cost": 12000,
+    "price": 13000,
+    "stock": 2,
+    "discountPer": 0,
+    "unitDiscount": 1,
+    "deliveryService": true,
+    "onStore": true,
+    "numSales": 0,
+    "numScore": 0,
+    "idProduct": "{{productId}}"
+}
+
+###
+# 1. Create a New Location (POST /locations)
+# Requires a valid Product ID to link to.
+PUT {{urlLocal}}/updateLocation
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+    "id": "64416555fcf14e55f34d30f0",
+    "location": "Pensilvania - Caldas",
+    "cost": 12000,
+    "price": 15000,
+    "stock": 2,
+    "discountPer": 0,
+    "unitDiscount": 1,
+    "deliveryService": true,
+    "onStore": true,
+    "numSales": 0,
+    "numScore": 0,
+    "idProduct": "{{productId}}"
+}
+
+###
+# 2. Get All Locations (GET /locations)
+GET {{urlLocal}}/locations
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+###
+# 3. Get Locations for a Specific Product (GET /locations/product/:productId)
+# Assumes a route exists to filter locations by idProduct.
+# Replace {{productId}} with the actual Product ID.
+POST {{urlLocal}}/locationsByProduct
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+    "idProduct": "{{productId}}"
+}
+
+###
+# 4. Get a Specific Location by ID (GET /locations/:id)
+# Replace {{locationId}} with the actual ID of a location.
+GET {{urlLocal}}/locations
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+###
+# 6. Delete a Location by ID (DELETE /locations/:id)
+# Replace {{locationId}} with the ID of the location you want to delete.
+# Based on your schema's 'deleted' field, your controller might perform a soft-delete (set deleted: true)
+# rather than a hard-delete. This REST client example just sends the DELETE request.
+DELETE {{urlLocal}}/deleteLocation
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+    "id": "64416555fcf14e55f34d30f0",
+    "deleted": true
+}
+
+### para insomnia https://www.youtube.com/watch?v=OMBwyCNmoPY
+
+
+### transferir productos de una bodega a otra
+###
+POST {{urlLocal}}/createTransferProduct
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "idProduct": "6410dbd0870d3d2ed539d339",
+    "quantity": 50,
+    "originLocation": "Manizales sector la arenera",
+    "destinationLocation": "Manizales - Caldas",
+    "notes": "Prueba de transferencia"
+}
+
+### transferir productos de una bodega a otra
+
+###
+GET {{urlLocal}}/getAllTransfersProducts
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+###
+GET {{urlLocal}}/getTransferProductById/{{productTransferId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+###
+GET {{urlLocal}}/getTransfersProductsByUser
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+###
+PUT {{urlLocal}}/updateTransferProduct/{{productTransferId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "idProduct": "6410dbd0870d3d2ed539d339",
+    "quantity": 8,
+    "originLocation": "Manizales - Caldas",
+    "destinationLocation": "Manizales sector la arenera",
+    "notes": "Prueba de transferencia"
+}
+
+###
+DELETE {{urlLocal}}/deleteTransferProduct/{{productTransferId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+
+###
+### 1. Create a New Company (POST /companies)
+POST {{urlLocal}}/companies
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+    "name": "Empresa Ejemplo SAS",
+    "nit": "1234567890-1",
+    "address": "Calle 123 # 45-67",
+    "phone": "573101234567",
+    "email": "contacto@empresa-ejemplo.com"
+}
+
+###
+# 2. Get All Companies (GET /companies)
+GET {{urlLocal}}/companies
+Content-Type: application/json // Not strictly necessary for GET without body, but harmless
+Authorization: Bearer {{token}}
+
+###
+# 2. Get All Companies (GET /companies)
+GET {{urlLocal}}/companies/all
+Content-Type: application/json // Not strictly necessary for GET without body, but harmless
+Authorization: Bearer {{token}}
+
+###
+# 3. Get Company Names Only (GET /companies/names)
+GET {{urlLocal}}/companies/names
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+###
+# 4. Get Companies with Limit (GET /companies/limit/:limit)
+# Replace {{limit}} with the desired number of companies to retrieve
+GET {{urlLocal}}/companies/limit/{{limit}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+###
+# 5. Update a Company by ID (PUT /companies/:id)
+# Replace {{companyId}} with the actual ID of the company you want to update.
+# Include only the fields you want to change in the body.
+PUT {{urlLocal}}/companies/{{companyId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+    "address": "Carrera 78 # 90-12",
+    "phone": "573209876543",
+    "email": "info@company.example.com",
+    "name": "Empresa Ejemplo S.A.S",
+    "nit": "1234567890-1",
+    "deleted": false
+}
+
+###
+# 6. Delete a Company by ID (DELETE /companies/:id)
+# Replace {{companyId}} with the ID of the company you want to delete.
+# Be cautious, deleting a company might impact related ProductEntry records depending on your database rules.
+DELETE {{urlLocal}}/companies/{{companyId}}
+Content-Type: application/json // Not strictly necessary for DELETE without a body
+Authorization: Bearer {{token}}
+
+###
+# 1. Create a New Product Entry (POST /productentries)
+POST {{urlLocal}}/product-entries
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+    "entryType": "COMPRA",
+    "company": "{{companyId}}",
+    "location": "{{locationId}}",
+    "quantity": 100,
+    "unitCost": 50.0,
+    "profitPercentage": 25.5,
+    "entryDate": "2025-05-01T10:00:00.000Z",
+    "notes": "Initial stock from supplier XYZ"
+}
+
+###
+# 2. Get All Product Entries (GET /productentries)
+GET {{urlLocal}}/product-entries
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+###
+# 2. Get All Product Entries (GET /productentries)
+GET {{urlLocal}}/product-entries/all
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+###
+# 3. Get Product Entries by Authenticated User (GET /productentries/user)
+# This uses the user ID extracted from the JWT token in the backend.
+GET {{urlLocal}}/product-entries/user
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+###
+# 4. Get a Specific Product Entry by ID (GET /productentries/:id)
+# Replace {{productEntryId}} with an actual ID obtained from a previous request (e.g., from #1 or #2)
+GET {{urlLocal}}/product-entries/{{productEntryId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+###
+# 5. Update a Product Entry by ID (PUT /productentries/:id)
+# Replace {{productEntryId}} with the ID of the entry you want to update.
+# Include only the fields you want to change in the body.
+PUT {{urlLocal}}/product-entries/{{productEntryId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+    "quantity": 120, 
+    "profitPercentage": 30, 
+    "notes": "Updated stock count and target margin" 
+}
+
+###
+# 6. Delete a Product Entry by ID (DELETE /productentries/:id)
+# Replace {{productEntryId}} with the ID of the entry you want to delete.
+# This will likely require careful consideration regarding inventory history.
+DELETE {{urlLocal}}/product-entries/{{productEntryId}}
+Content-Type: application/json // Content-Type is technically not needed for DELETE without a body, but harmless
+Authorization: Bearer {{token}}
