@@ -14,6 +14,7 @@ const connection = mongoose.connection;
 
 connection.once('open', () => {
     console.info('Mongodb connection stablished');
+    console.info(`Connected to MongoDB at: ${config.DB.URI}`);
 });
 
 connection.on('error', err => {

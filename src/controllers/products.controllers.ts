@@ -685,70 +685,87 @@ export async function productsManual(req: Request, res: Response): Promise<Respo
 
 export async function getProductsWithLocations(req: Request, res: Response): Promise<Response> {
     try {
-        const { search, limit = 10, skip = 0 } = req.query;
+        // 1. Recuperar parámetros de consulta y establecer límite de seguridad
+        const { search, limit = 200 } = req.query; 
+        
+        const limitNum = Math.min(parseInt(limit as string), 500); 
 
+        const searchQuery = (search as string || '').trim();
         let productMatch: any = { deleted: false };
-        if (search) {
-            // Uso de $text index para búsqueda rápida y relevante
-            productMatch.$text = { $search: search as string };
+        
+        // 2. Separar el texto de búsqueda en palabras clave, como hace el frontend
+        const keywords = searchQuery.toLowerCase().split(/\s+/).filter(word => word.length > 0);
+
+        if (keywords.length >= 1) {
+            // El frontend requiere al menos 3 caracteres, pero el backend debe ser flexible.
+            // Si el frontend está migrado, keywords.length nunca será 1 o 2 a menos que sea una cadena vacía.
+
+            // 🚀 IMPLEMENTACIÓN DE LÓGICA "TODAS LAS PALABRAS DEBEN COINCIDIR"
+            // productMatch.$and contendrá un elemento de búsqueda ($or) por cada palabra clave.
+            productMatch.$and = keywords.map(keyword => {
+                // Crear una expresión regular para la palabra clave actual
+                const keywordRegex = new RegExp(keyword, 'i');
+                
+                // Crear un filtro $or para buscar la palabra clave en cualquiera de los 8 campos
+                return {
+                    $or: [
+                        { name: { $regex: keywordRegex } },          
+                        { code: { $regex: keywordRegex } },          
+                        { mark: { $regex: keywordRegex } },          
+                        { categories: { $regex: keywordRegex } },    
+                        { exactSearchTerms: { $regex: keywordRegex } }, 
+                        { searchKeywords: { $regex: keywordRegex } },   
+                        { stemmedKeywords: { $regex: keywordRegex } },  
+                        { userKeywords: { $regex: keywordRegex } }      
+                    ]
+                };
+            });
+
+        } else if (searchQuery.length > 0) {
+            // Caso de borde: si el usuario introduce solo espacios, devolvemos vacío
+             return res.status(200).json({ products: [] });
         }
 
+
         const pipeline: PipelineStage[] = [
-            // 1. Filtrar Productos base
+            // 3. Filtrar Productos base: ahora usa $and (si hay keywords) y deleted: false
             { $match: productMatch },
-            { $limit: parseInt(limit as string) },
-            { $skip: parseInt(skip as string) },
-            // 2. Lookup para obtener las ubicaciones (locations) asociadas a cada producto
+            
+            // 4. Ordenación por defecto
+            { $sort: { name: 1 } }, 
+            
+            // 5. Aplicar el Límite de Seguridad
+            { $limit: limitNum }, 
+
+            // 6. Lookup para obtener las ubicaciones (locations)
             {
                 $lookup: {
-                    from: 'locations', // Nombre de la colección de Location
+                    from: 'locations', 
                     localField: '_id',
                     foreignField: 'idProduct',
                     as: 'locations',
-                    // Pipeline anidado para embeber los datos de la tienda (Store)
                     pipeline: [
-                        { $match: { deleted: false, stock: { $gt: 0 } } }, // Solo ubicaciones activas y con stock
-                        // *** NUEVO PASO: Lookup anidado para obtener el nombre y datos de la tienda ***
-                        {
-                            $lookup: {
-                                from: 'stores', // Nombre de la colección de Store
-                                localField: 'idStore',
-                                foreignField: '_id',
-                                as: 'storeInfo', // Nombre del campo donde se incrustará la info de la tienda
-                            }
-                        },
-                        // Desempaquetar el array storeInfo para facilitar la proyección, asumiendo que idStore es único
-                        { $unwind: { path: '$storeInfo', preserveNullAndEmptyArrays: false } },
-                        // Proyección de la Location: devolver Location más datos de Store
-                        {
-                            $project: {
-                                _id: 1,
-                                idProduct: 1,
-                                idStore: 1,
-                                price: 1,
-                                stock: 1,
-                                discountPer: 1,
-                                unitDiscount: 1,
-                                // Datos de la tienda
-                                storeName: '$storeInfo.name',
-                                storeCity: '$storeInfo.city',
-                                storeAddress: '$storeInfo.address',
-                            }
-                        }
+                        // Solo ubicaciones activas y con stock > 0
+                        { $match: { deleted: false, stock: { $gt: 0 } } },
+                        // Si necesita el storeInfo, debe agregarlo aquí
                     ]
                 }
             },
-            // 3. Quitar productos que no tienen ubicaciones/stock disponibles
+            // 7. Eliminar productos sin stock disponible en ninguna ubicación (después del lookup)
             { $match: { locations: { $ne: [] } } },
-            // 4. Proyección final: Devolver solo los campos necesarios (Optimización)
-            { $project: { _id: 1, name: 1, code: 1, mark: 1, IVAPercent: 1, locations: 1 } }
+            
+            // 8. Proyección final
+            { 
+                $project: { 
+                    _id: 1, name: 1, code: 1, mark: 1, IVAPercent: 1, locations: 1 
+                } 
+            }
         ];
 
-        // NOTA: Reemplaza Product.aggregate y Product.countDocuments con tus modelos Mongoose reales
         const productsWithLocations = await Product.aggregate(pipeline);
-        const totalCount = await Product.countDocuments(productMatch);
 
-        return res.status(200).json({ products: productsWithLocations, total: totalCount });
+        return res.status(200).json({ products: productsWithLocations });
+
     } catch (error: any) {
         console.error(`Error en getProductsWithLocations: ${error.message}`);
         return res.status(500).json({ message: "Error interno del servidor al buscar productos con ubicaciones." });

@@ -45,7 +45,7 @@ COPY --from=base /app/venv /app/venv
 USER root
 
 # Variables de entorno
-ENV MONGODB_URI=mongodb://amasUser:*AmAsUsErFiRst1@database:27017/amas
+ENV MONGODB_URI=mongodb://amasUser:*AmAsUsErFiRst1@databasedonmario:27017/donmario
 ENV URL_ERRFILE=/home/errors.txt
 ENV URL_IMAGESPRODUCT=/home/imagesProducts
 ENV URL_IMAGESMARKS=/home/imagesMarks
@@ -56,7 +56,7 @@ ENV URL_PATH_FILES=/home/files
 ENV URL_PATH_TEMP=/home/temp
 ENV EMAIL_ALERTS=alertsferreteriaamas@gmail.com
 ENV PYTHONSCRIPTS=/home/scripts/pythonScripts
-ENV PORT=3500
-ENV URL_HOST=https://amass.com.co/api
+ENV PORT=3501
+ENV URL_HOST=https://amas.com.co/api
 
 CMD ["node", "./dist/index.js"]

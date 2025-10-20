@@ -3,48 +3,48 @@ version: '3.8'
 
 services:
   # Base de datos MongoDB
-  database:
+  databasedonmario:
     image: mongo:7.0.2
-    container_name: database_amas
+    container_name: database_donmario
     restart: always
     ports:
-      - 127.0.0.1:27017:27017
+      - 127.0.0.1:27018:27017
     volumes:
-      - /disk4/amas/database:/data/db
+      - /disk4/amas/databaseDonmario:/data/db
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=amasMaster
-      - MONGO_INITDB_ROOT_PASSWORD=*AmAsMaStErFiRst1
+      - MONGO_INITDB_ROOT_USERNAME=donMarioMaster
+      - MONGO_INITDB_ROOT_PASSWORD=*DonMarioFiRst1
     command: --auth
     networks:
       - web
 
-  # Backend del sistema AMAS
-  amasbackend:
-    image: amasbackend
-    container_name: amasbackend
+  # Backend del sistema DONMARIO
+  donmariobackend:
+    image: donmariobackend
+    container_name: donmariobackend
     restart: on-failure:10
     build: .
     command: node ./dist/index.js
     expose:
-      - "3500"
+      - "3501"
     environment:
-      - VIRTUAL_HOST=amass.com.co
-      - LETSENCRYPT_HOST=amass.com.co
+      - VIRTUAL_HOST=amas.com.co
+      - LETSENCRYPT_HOST=amas.com.co
       - LETSENCRYPT_EMAIL=soporteti@amass.com.co
-      - VIRTUAL_PORT=3500
+      - VIRTUAL_PORT=3501
       - VIRTUAL_PATH=/api
     volumes:
-      - /disk4/amas/imagesProducts:/home/imagesProducts
-      - /disk4/amas/imagesMarks:/home/imagesMarks
-      - /disk4/amas/imagesCategories:/home/imagesCategories
-      - /disk4/amas/supportsPayments:/home/supportsPayments
-      - /disk4/amas/pdfQuotes:/home/pdfQuotes
-      - /disk4/amas/pdfOrder:/home/pdfOrder
-      - /disk4/amas/files:/home/files
-      - /disk4/amas/temp:/home/temp
-      - /disk4/amas/scripts/pythonScripts:/home/scripts/pythonScripts
+      - /disk4/donmario/imagesProducts:/home/imagesProducts
+      - /disk4/donmario/imagesMarks:/home/imagesMarks
+      - /disk4/donmario/imagesCategories:/home/imagesCategories
+      - /disk4/donmario/supportsPayments:/home/supportsPayments
+      - /disk4/donmario/pdfQuotes:/home/pdfQuotes
+      - /disk4/donmario/pdfOrder:/home/pdfOrder
+      - /disk4/donmario/files:/home/files
+      - /disk4/donmario/temp:/home/temp
+      - /disk4/donmario/scripts/pythonScripts:/home/scripts/pythonScripts
     depends_on:
-      - database
+      - databasedonmario
     networks:
       - web
 

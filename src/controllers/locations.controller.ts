@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { Types } from 'mongoose';
-import Location, { CreateLocationDTO } from '../models/locations';
+import Location, { CreateLocationDTO, LocationI } from '../models/locations';
 import logger from '../helpers/winstonLogger';
 
 class CustomError extends Error {
@@ -138,6 +138,56 @@ export async function locations(req: Request, res: Response, next: NextFunction)
     } catch (error: any) {
         logger.error(`Error retrieving all location records: ${error.message}`, { stack: error.stack, details: error });
         next(new CustomError('Error retrieving all location records.', 500));
+    }
+}
+
+export async function locationsByListIdAndStore(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
+    try {
+        const { list } = req.body; 
+
+        if (!list || !Array.isArray(list) || list.length === 0) {
+            logger.warn('Missing or invalid list array for locationsByListIdAndStore request.');
+            return res.status(400).json({ message: 'A valid, non-empty list of {idProduct, idStore} is required.' });
+        }
+
+        // Validación de formato de IDs (se mantiene)
+        const invalidItems = list.filter(item => 
+            !item.idProduct || !isValidObjectId(item.idProduct) || 
+            !item.idStore || !isValidObjectId(item.idStore)
+        );
+
+        if (invalidItems.length > 0) {
+            return res.status(400).json({ message: 'All list items must have valid Product ID and Store ID.' });
+        }
+
+        // Construcción de la consulta de Mongo (se mantiene)
+        const queryConditions = list.map((item: any) => ({
+            $and: [
+                { idProduct: new Types.ObjectId(item.idProduct) },
+                { idStore: new Types.ObjectId(item.idStore) }
+            ]
+        }));
+        
+        // 🚀 CAMBIO CLAVE: Usamos .populate('idProduct')
+        const RESULT: LocationI[] = await Location.find({ 
+            $or: queryConditions,
+            deleted: false
+        })
+        .populate({
+            path: 'idProduct',
+            model: 'Product', // Asegúrate de que 'Product' sea el nombre de tu modelo de producto
+            // Puedes seleccionar qué campos del producto necesitas (ej: name, images, description)
+            select: 'code name mark description content wheigth categories image mshigh mslong msthickness IVAPercent', 
+        });
+
+        logger.info(`Locations retrieved by list of IDs. Requested: ${list.length}, Found: ${RESULT.length}`);
+        
+        // 4. Respuesta
+        return res.status(200).json(RESULT);
+
+    } catch (error: any) {
+        logger.error(`Error retrieving locations by list of product/store: ${error.message}`, { stack: error.stack, details: error, body: req.body });
+        next(new CustomError('Error retrieving locations by list of IDs.', 500));
     }
 }
 

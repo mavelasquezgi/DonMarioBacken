@@ -1,4 +1,4 @@
-import { model, Schema, Document } from 'mongoose'
+import { model, Schema, Document, Types } from 'mongoose' // Importamos Types
 import { UserRole } from './role';
 
 export interface IUSer extends Document {
@@ -30,6 +30,9 @@ export interface IUSer extends Document {
     // Campos específicos para vendedores
     ranking?: number;
     commissionPercentage?: number;
+
+    // AÑADIDO: Campo para la relación Muchos a Muchos (solo para roles STORE)
+    sellerIds?: Types.ObjectId[];
 }
 
 const userSchema = new Schema(
@@ -59,11 +62,18 @@ const userSchema = new Schema(
 
         // Campos específicos para ferreterías y proveedores
         businessName: { type: String, trim: true },
-        businessRegistrationNumber: { type: String, trim: true, unique: true, sparse: true }, // sparse: true permite null/undefined
+        businessRegistrationNumber: { type: String, trim: true, unique: true, sparse: true },
 
         // Campos específicos para vendedores
         ranking: { type: Number, default: 0 },
         commissionPercentage: { type: Number, default: 0 },
+
+        // AÑADIDO: Lista de IDs de Vendedores asociados a esta Ferretería (Relación M:N)
+        sellerIds: [{
+            type: Types.ObjectId, // Referencia al mismo modelo 'User'
+            ref: 'User',
+            required: false // Es opcional para otros roles
+        }],
     },
     { timestamps: true }
 );

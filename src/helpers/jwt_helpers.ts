@@ -3,11 +3,10 @@ import config from '../config/config'
 import { TokenPayload } from '../models/payloadJwt.dto';
 
 export const createToken = ( payload: TokenPayload, expiresIn: number) => {
-    console.log('Creating token with payload:', payload, 'and expiresIn:', expiresIn);
     return new Promise((resolve, reject) => {
         const options = {
             expiresIn: expiresIn,
-            issuer: 'amass.com.co',
+            issuer: 'amas.com.co',
             audience: String(payload.id),
         }
         jwt.sign(payload, config.jwtSecret, options, (err, token) => {

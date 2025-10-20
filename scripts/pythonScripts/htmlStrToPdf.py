@@ -309,22 +309,23 @@ if __name__ == "__main__":
         strId = sys.argv[2]
         pathPdf = sys.argv[3]
         # local
-        mongoUri = "mongodb://localhost:27017/amas"
+        mongoUri = "mongodb://localhost:27017/donmario"
         # production
         #mongoUri = "mongodb://amasUser:*AmAsUsErFiRst1@database:27017/amas"
         if activeFunction == OPTIONSPDF["quote"]:
             collection = "quotes"
-            objQuote = getRegisterById(strId,mongoUri,"amas",collection)
+            objQuote = getRegisterById(strId,mongoUri,"donmario",collection)
+            print("objQuote",objQuote)
             strHtml = create_html_quote(objQuote,activeFunction)
             pdfOfHtmlText(strHtml,pathPdf)
         elif activeFunction == OPTIONSPDF["preorder"]:
             collection = "preorders"
-            objQuote = getRegisterById(strId,mongoUri,"amas",collection)
+            objQuote = getRegisterById(strId,mongoUri,"donmario",collection)
             strHtml = create_html_quote(objQuote,activeFunction)
             pdfOfHtmlText(strHtml,pathPdf)
         elif activeFunction == OPTIONSPDF["order"]:
             collection = "orders"
-            objQuote = getRegisterById(strId,mongoUri,"amas",collection)
+            objQuote = getRegisterById(strId,mongoUri,"donmario",collection)
             strHtml = create_html_quote(objQuote,activeFunction)
             pdfOfHtmlText(strHtml,pathPdf)
         else:

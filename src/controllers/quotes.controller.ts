@@ -12,113 +12,160 @@ import { format } from 'date-fns';
 import mongoose, { PipelineStage, Types } from 'mongoose';
 import logger from '../helpers/winstonLogger';
 
+// Función de utilidad para manejar la lógica de cálculo del total (limpieza)
+function calculateTotal(listProducts: any[]): number {
+    let total = 0;
+    listProducts.forEach((element: any) => {
+        const location = element.locations ? element.locations[0] : null;
+
+        if (!location || typeof location.price !== 'number' || typeof element.quantity !== 'number' || element.quantity <= 0) {
+            logger.warn(`Skipping product in total calculation due to invalid data: ${element.code || 'Unknown'}`);
+            return;
+        }
+
+        let priceToUse = location.price;
+
+        // Aplicar descuento
+        if (location.unitDiscount && element.quantity >= location.unitDiscount &&
+            location.discountPer !== undefined && location.discountPer > 0) {
+
+            const discountedPrice = priceToUse * (1 - (location.discountPer / 100));
+            total += element.quantity * discountedPrice;
+        } else {
+            total += element.quantity * priceToUse;
+        }
+    });
+
+    return parseFloat(total.toFixed(2));
+}
+
+// Función de utilidad para manejar la descripción de errores de Mongoose
+function handleMongooseError(error: any, res: Response): Response {
+    if (error.name === 'ValidationError') {
+        const errors = Object.keys(error.errors).map(key => ({
+            field: key,
+            message: error.errors[key].message
+        }));
+        logger.error(`Validation Error creating quote: ${JSON.stringify(errors)}`);
+        return res.status(400).json({
+            message: "Fallo de validación en los datos de la cotización.",
+            details: errors
+        });
+    }
+
+    if (error.code === 11000) { // Error de clave duplicada de MongoDB
+        const field = Object.keys(error.keyValue)[0];
+        logger.error(`Duplicate Key Error creating quote: Field ${field} is duplicated.`);
+        return res.status(409).json({
+            message: `El campo ${field} ya existe.`,
+            details: `Valor duplicado: ${error.keyValue[field]}`
+        });
+    }
+
+    logger.error(`Unhandled Database Error creating quote: ${error.message}`);
+    return res.status(500).json({
+        message: "Error interno del servidor al interactuar con la base de datos.",
+        details: error.message
+    });
+}
+
+// =========================================================================
+
 export async function createQuote(req: Request, res: Response): Promise<Response> {
     logger.info(`Attempting to create a new quote.`);
 
-    // 1. AUTENTICACIÓN: Validación del token de acceso (no logueado)
+    // 1. AUTENTICACIÓN
     if (!(req.headers?.tokenbyaccesss)) {
-        logger.warn(`Unauthorized attempt to create quote: No token provided.`);
         return res.status(401).send({ message: 'No autorizado: Token de acceso requerido.' });
     }
 
     const validateToken: any = await verifyToken(req.headers?.tokenbyaccesss as string);
     if (!(validateToken && validateToken.username === "Amas" && validateToken.password === "QW1hc3MqQWRtaW4=")) {
-        logger.warn(`Unauthorized attempt to create quote: Invalid token credentials.`);
         return res.status(403).send({ message: 'Acceso denegado: Credenciales de token inválidas.' });
     }
-    
-    try {
-        // 2. PARSEO DE DATOS y VALIDACIÓN DE ESTRUCTURA
-        const listProductsParsed = JSON.parse(req.body.listProducts);
 
+    try {
+        // 2. PARSEO DE DATOS y VALIDACIÓN BÁSICA
+        let listProductsParsed: any[];
+        let contentParsed: any = {};
+
+        // 2a. Parsear listProducts
+        try {
+            listProductsParsed = JSON.parse(req.body.listProducts);
+        } catch (e) {
+            return res.status(400).json({ message: "El formato de 'listProducts' es inválido (JSON no válido)." });
+        }
         if (!Array.isArray(listProductsParsed) || listProductsParsed.length === 0) {
-            logger.warn(`Validation Error: 'listProducts' is empty or invalid.`);
             return res.status(400).json({ message: "La lista de productos es requerida y debe ser un array no vacío." });
         }
-        
-        // 3. DETERMINACIÓN DE idUser
-        // Si el usuario está logueado, req.user.id contendrá su ObjectId. 
-        // Si no está logueado (solo token de acceso), req.user es undefined o null.
-        // Dado que el esquema lo marca como REQUIRED, debemos asegurarnos de tener un valor,
-        // o cambiar el esquema a `required: false` para usuarios no autenticados.
-        // ASUMO que si pasa la autenticación del token 'Amas', es un usuario anónimo (null).
-        const userId = req.user ? new Types.ObjectId(req.user.id) : null;
-        
-        if (!userId) {
-            // Nota: Si el esquema de Mongo requiere idUser, y permites pedidos anónimos, 
-            // debes: a) Cambiar el esquema a required: false, O b) Usar un ObjectId genérico de 'usuario anónimo'.
-            // Optaré por usar null y te sugiero cambiar el esquema a required: false si permites anónimos.
-            logger.warn("Quote being created by an anonymous user (only access token provided). idUser will be set to null.");
+
+        // 2b. Parsear content (si existe)
+        if (req.body.content) {
+            try {
+                contentParsed = JSON.parse(req.body.content);
+            } catch (e) {
+                return res.status(400).json({ message: "El formato de 'content' es inválido (JSON no válido)." });
+            }
         }
 
+        // 3. DETERMINACIÓN DE ID DE USUARIO Y CÁLCULO DE TOTAL
+        // idUser: ID del creador (vendedor/admin), puede ser null si no hay sesión.
+        const idUser = req.user && req.user.id ? new Types.ObjectId(req.user.id) : null;
 
-        // 4. CÁLCULO DEL TOTAL
-        let total = 0;
-        listProductsParsed.forEach((element: any) => {
-            const location = element.locations ? element.locations[0] : null;
-
-            if (!location || !location.price || typeof element.quantity !== 'number' || element.quantity <= 0) {
-                logger.warn(`Skipping product in total calculation due to missing/invalid data: ${JSON.stringify(element)}`);
-                return;
-            }
-
-            let priceToUse = location.price; // Asume que este es el precio final (cliente o tienda)
-
-            // Aplicar descuento si las condiciones se cumplen
-            if (location.unitDiscount && element.quantity >= location.unitDiscount && 
-                location.discountPer !== undefined && location.discountPer > 0) {
-                
-                const discountedPrice = priceToUse * (1 - (location.discountPer / 100));
-                total += element.quantity * discountedPrice;
-            } else {
-                total += element.quantity * priceToUse;
-            }
-        });
+        // idClient: ID único del cliente, debe venir en req.body.idClient (como ObjectId)
+        if (!req.body.idClient) {
+            return res.status(400).json({ message: "El ID único del cliente ('idClient') es requerido." });
+        }
+        const idClient = new Types.ObjectId(req.body.idClient);
 
 
-        // 5. CREACIÓN DEL OBJETO DE LA COTIZACIÓN
+        const totalCalculated = calculateTotal(listProductsParsed);
+
+        // 4. CREACIÓN DEL OBJETO DE LA COTIZACIÓN (Mapeo directo y minimalista)
         const NEWQUOTE: any = {
+            // Campos automáticos y de configuración
             idQuote: await getConsecutive(typeObject.quote, config.COMPANY.NAME, config.COMPANY.ID, config.COMPANY.TYPE),
             company: config.COMPANY.NAME,
             idCompany: config.COMPANY.ID,
             addressCompany: config.COMPANY.ADDRESS,
             typeCompany: config.COMPANY.TYPE,
             phoneCompany: config.COMPANY.PHONE,
-            
-            // Datos del Cliente
-            clientNames: req.body.names || "",
-            clientLastnames: req.body.lastnames || "",
-            idClient: req.body.document || "",
-            addressClient: req.body.address || "",
-            departmentClient: req.body.department || "",
-            cityClient: req.body.city || "",
-            phoneClient: req.body.phone || "",
-            emailClient: req.body.email || "",
-            
-            // Flags
-            sendemail: req.body.sendemail === true, // Asegura que sean booleanos
-            sendwhatsapp: req.body.sendwhatsapp === true, // Asegura que sean booleanos
-
-            // Datos de la Orden
             dateOrder: format(new Date(), 'yyyy-MM-dd_HH:mm:ss'),
-            listProducts: listProductsParsed,
-            daysValid: 3,
             deleted: false,
-            // Aquí se asigna el userId (Puede ser null si el esquema lo permite)
-            idUser: userId, 
+
+            // Campos de la solicitud (Mapeo directo gracias a la asunción de coincidencia de nombres)
+            clientNames: req.body.clientNames,
+            clientLastnames: req.body.clientLastnames,
+            documentClient: req.body.documentClient,
+            addressClient: req.body.addressClient,
+            departmentClient: req.body.departmentClient,
+            cityClient: req.body.cityClient,
+            phoneClient: req.body.phoneClient,
+            emailClient: req.body.emailClient,
+            daysValid: req.body.daysValid || 3,
+            sendemail: req.body.sendemail === true,
+            sendwhatsapp: req.body.sendwhatsapp === true,
+            type: req.body.type || "QUOTE",
+
+            // Campos procesados
+            idClient: idClient,
+            listProducts: listProductsParsed,
+            content: contentParsed,
+            idUser: idUser,
 
             // Totales
-            total: parseFloat(total.toFixed(2)),
-            due_amount: parseFloat(total.toFixed(2)),
+            total: totalCalculated,
+            due_amount: totalCalculated,
         }
 
-        // 6. GUARDAR Y ENVIAR ALERTAS
+        // 5. GUARDAR EN MONGOOSE (Mongoose validará todos los campos requeridos)
         const quote = new Quote(NEWQUOTE);
         await quote.save();
         logger.info(`Quote created successfully with ID: ${quote._id}`);
 
+        // 6. ENVÍO DE ALERTAS
         const quoteLink = `${req.headers.origin}/orders/quote/${quote._id}`;
-        const alertSubject = `Se creó su cotización ${quote._id}`;
+        const alertSubject = `Se creó su cotización ${quote.idQuote}`;
 
         if (NEWQUOTE.sendemail) {
             const recipientEmails = [NEWQUOTE.emailClient, config.COMPANY.EMAILALERTS].filter(Boolean);
@@ -129,17 +176,18 @@ export async function createQuote(req: Request, res: Response): Promise<Response
                 logger.info(`Email alert sent successfully for quote ${quote._id}`);
             }
         }
-        
-        // El código de Whatsapp está comentado, asumo que es intencional.
-        // if (NEWQUOTE.sendwhatsapp) { ... } 
 
-        return res.status(201).json({ success: quote.idQuote, quote }); // Devolver el idQuote para confirmación
+        return res.status(201).json({ success: quote.idQuote, quote });
+
     } catch (error: any) {
-        logger.error(`Error creating quote: ${error.message}`, error);
-        if (error instanceof SyntaxError && error.message.includes('JSON')) {
-            return res.status(400).json({ message: "Error en el formato JSON de 'listProducts'." });
+        // Manejar errores de Mongoose (Validación, Duplicado, etc.)
+        if (error.name === 'ValidationError' || error.code === 11000) {
+            return handleMongooseError(error, res);
         }
-        return res.status(500).json({ message: "Error interno del servidor al crear la cotización." });
+
+        // Manejar otros errores
+        logger.error(`Error creating quote (Unhandled): ${error.message}`, error);
+        return res.status(500).json({ message: "Error interno del servidor.", details: error.message });
     }
 }
 

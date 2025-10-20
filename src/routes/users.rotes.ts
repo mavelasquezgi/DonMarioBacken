@@ -5,16 +5,16 @@ import passport from 'passport'
 import { checkIsInRole } from '../middlewares/passport';
 import { UserRole } from '../models/role';
 
-router.get('/listUsers', passport.authenticate('jwt', { session: false }), checkIsInRole(UserRole.ADMIN), listUsers);
+router.get('/listUsers', passport.authenticate('jwt', { session: false }), checkIsInRole(UserRole.ADMIN, UserRole.SELLER), listUsers);
 
 router.get('/listUsersProject', passport.authenticate('jwt', { session: false }), checkIsInRole(UserRole.ADMIN, UserRole.SELLER), listUsersProject);
 
-router.post('/updateUser', passport.authenticate('jwt', { session: false }), checkIsInRole(UserRole.ADMIN), updateUser);
+router.post('/updateUser', passport.authenticate('jwt', { session: false }), checkIsInRole(UserRole.ADMIN, UserRole.SELLER), updateUser);
 
 router.post('/deleteUser', passport.authenticate('jwt', { session: false }), checkIsInRole(UserRole.ADMIN), deleteUser);
 
 router.get('/userById/:id', passport.authenticate('jwt', { session: false }), userById);
 
-router.post('/userByFilterProject', passport.authenticate('jwt', { session: false }),checkIsInRole(UserRole.ADMIN), usersByFilterProject);
+router.post('/userByFilterProject', passport.authenticate('jwt', { session: false }),checkIsInRole(UserRole.ADMIN, UserRole.SELLER), usersByFilterProject);
 
 export default router;

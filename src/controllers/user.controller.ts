@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import User from '../models/user';
+import User, { IUSer } from '../models/user';
 import { createToken, verifyToken } from '../helpers/jwt_helpers';
 import { matchPassword, encryptPassword } from '../helpers/helpers';
 import { sendEmailValidation } from '../helpers/nodemailer.helpers';
@@ -19,7 +19,7 @@ async function validStrField(field: string): Promise<boolean> {
     return true;
 }
 
-const generateAuthToken = async ({ 
+const generateAuthToken = async ({
     _id, role, names, lastnames, businessRegistrationNumber // Desestructuración directa para simplificar el mantenimiento
 }: {
     _id: string;
@@ -30,19 +30,18 @@ const generateAuthToken = async ({
 }, expiresIn: number): Promise<string> => {
     // 1. Construye el Payload del token
     const payload: TokenPayload = {
-        id: _id.toString(), 
-        role,               
-        username: `${names} ${lastnames}`, 
+        id: _id.toString(),
+        role,
+        username: `${names} ${lastnames}`,
         businessRegistrationNumber
     };
-    
+
     // 2. Llama a la función de creación/firma del JWT (asumiendo que está importada)
-    return await createToken(payload, expiresIn)as string;
+    return await createToken(payload, expiresIn) as string;
 };
 
 export const signUp = async (req: Request, res: Response): Promise<Response> => {
     logger.info('Attempting user signup.');
-    console.log('Signup request body:', req.body); // Debugging line to inspect request body
 
     const { tokenbyaccesss } = req.headers;
     if (!tokenbyaccesss) {
@@ -53,7 +52,7 @@ export const signUp = async (req: Request, res: Response): Promise<Response> => 
     let validateToken: any;
     try {
         validateToken = await verifyToken(tokenbyaccesss as string);
-        
+
         if (!validateToken || 'message' in validateToken || validateToken.username !== "Amas" || validateToken.password !== "QW1hc3MqQWRtaW4=") {
             logger.warn('Signup failed: Invalid access token credentials or expired/invalid token.');
             return res.status(403).send({ message: 'Acceso denegado: Credenciales de token inválidas.' });
@@ -63,96 +62,100 @@ export const signUp = async (req: Request, res: Response): Promise<Response> => 
         return res.status(401).send({ message: 'No autorizado: Token inválido' });
     }
 
+    const {
+        document, email, password, names, lastnames, role, businessRegistrationNumber
+    } = req.body;
+
+    // Validación de rol
+    if (!Object.values(UserRole).includes(role)) {
+        logger.warn(`Signup failed: Invalid role provided: '${role}'.`);
+        return res.status(400).send({ message: `El rol '${role}' para el usuario no existe.` });
+    }
+
+    // Validación de formato de nombres/apellidos
+    if (!(await validStrField(names)) || !(await validStrField(lastnames))) {
+        logger.warn('Signup failed: Invalid characters in names or lastnames.');
+        return res.status(400).send({ message: 'El campo de los nombres o apellidos tienen caracteres no válidos.' });
+    }
+
     try {
-        const {
-            documentType, document, names, lastnames, email, password, phone, city, department, address,
-            gender, verification, role, businessName, businessRegistrationNumber, ranking, commissionPercentage
-        } = req.body;
-
-        if (!Object.values(UserRole).includes(role)) {
-            logger.warn(`Signup failed: Invalid role provided: '${role}'.`);
-            return res.status(400).send({ message: `El rol '${role}' para el usuario no existe` });
-        }
-
-        const validNamesField = await validStrField(names);
-        const validLastnamesField = await validStrField(lastnames);
-        if (!validNamesField || !validLastnamesField) {
-            logger.warn('Signup failed: Invalid characters in names or lastnames.');
-            return res.status(400).send({ message: 'El campo de los nombres o apellidos tienen caracteres no válidos' });
-        }
-
-        const existentUser = await User.findOne({
+        // --- 3. CHEQUEO DE CONFLICTOS DE USUARIO EXISTENTE ---
+        const query = {
             $or: [
                 { email: email },
                 { document: document },
-                ...(businessRegistrationNumber && (role === UserRole.STORE || role === UserRole.SUPPLIER) ? [{ businessRegistrationNumber: businessRegistrationNumber }] : [])
+                ...(businessRegistrationNumber && (role === UserRole.STORE || role === UserRole.SUPPLIER)
+                    ? [{ businessRegistrationNumber: businessRegistrationNumber }]
+                    : [])
             ]
-        });
-
-        if (existentUser) {
-            if (existentUser.email === email) {
-                return res.status(409).send({ message: `El email '${email}' ya posee una cuenta` });
-            }
-            if (existentUser.document === document) {
-                return res.status(409).send({ message: `El documento '${document}' ya está registrado` });
-            }
-            if (existentUser.businessRegistrationNumber === businessRegistrationNumber) {
-                return res.status(409).send({ message: `El número de registro de empresa ya existe.` });
-            }
-        }
-
-        let newUser: any = {
-            documentType,
-            document,
-            names,
-            lastnames,
-            email,
-            password: await encryptPassword(password.toString()),
-            phone,
-            city,
-            department,
-            address,
-            gender,
-            verification: verification || false,
-            role,
         };
 
-        if (role === UserRole.SELLER) {
-            newUser = { ...newUser, ranking, commissionPercentage };
-        } else if (role === UserRole.STORE || role === UserRole.SUPPLIER) {
-            newUser = { ...newUser, businessName, businessRegistrationNumber };
+        const existentUser = await User.findOne(query);
+
+        if (existentUser) {
+            let conflictField = '';
+            if (existentUser.email === email) {
+                conflictField = `El email '${email}' ya posee una cuenta.`;
+            } else if (existentUser.document === document) {
+                conflictField = `El documento '${document}' ya está registrado.`;
+            } else if (existentUser.businessRegistrationNumber === businessRegistrationNumber) {
+                conflictField = 'El número de registro de empresa ya existe.';
+            }
+            logger.warn(`Signup failed: Conflict detected for email ${email}. Reason: ${conflictField}`);
+            return res.status(409).send({ message: conflictField });
         }
 
-        const user = new User(newUser);
-        await user.save();
-        logger.info(`User '${user.email}' created successfully.`);
+        // --- 4. CONSTRUCCIÓN Y GUARDADO DEL NUEVO USUARIO (ESCALABLE) ---
 
+        // 1. Tomar todos los datos del body
+        const newUserPayload = { ...req.body };
+
+        // 2. Aplicar la única transformación obligatoria: cifrar el password
+        newUserPayload.password = await encryptPassword(password);
+
+        // 3. Crear el usuario. Mongoose:
+        //    a) Ignorará automáticamente los campos del body que no estén en el schema.
+        //    b) Usará los valores predeterminados (defaults) del schema para los campos faltantes (si están definidos).
+        //    c) Fallará con ValidationError (capturado en el bloque catch) si falta un campo 'required'.
+        const user = await new User(newUserPayload).save();
+        logger.info(`User '${user.email}' created successfully (ID: ${user._id}).`);
+
+        // --- 5. LÓGICA DE VERIFICACIÓN Y RESPUESTA FINAL ---
         if (!user.verification) {
-            const expiresIn = 3 * 60 * 60; // 3 horas para el token de verificación
-            
-            // ✅ Uso de la función interna refactorizada
-            console.log('Generating verification token for user:', user);
-            const verificationToken = await generateAuthToken(user, expiresIn);
+            const expiresIn = 3 * 60 * 60; // 3 horas
 
-            const sendEmailResult = await sendEmailValidation(req.headers.origin as string, verificationToken, user.email, `${user.names} ${user.lastnames}`);
+            const verificationToken = await generateAuthToken(user, expiresIn);
+            const sendEmailResult = await sendEmailValidation(
+                req.headers.origin as string,
+                verificationToken,
+                user.email,
+                `${user.names} ${user.lastnames}`
+            );
+
             if (sendEmailResult) {
                 logger.info(`Verification email sent successfully to '${user.email}'.`);
                 return res.status(200).send({ message: 'Usuario creado. Email de verificación enviado.' });
-            } else {user
+            } else {
                 logger.error(`Failed to send verification email to '${user.email}'.`);
-                return res.status(500).send({ message: 'Error enviando el email de verificación.' });
+                // Se devuelve 201 (Creado) pero con advertencia, ya que el usuario SÍ se creó
+                return res.status(201).send({ message: 'Usuario creado, pero hubo un error enviando el email de verificación.' });
             }
         } else {
             return res.status(201).send({ message: 'Usuario creado y verificado exitosamente.' });
         }
     } catch (e: any) {
+        // --- 6. MANEJO CENTRALIZADO DE ERRORES DB/VALIDACIÓN ---
         logger.error(`Signup failed for email '${req.body.email}': ${e.message}`, e);
+
         if (e.code === 11000) {
+            // Error de índice único de MongoDB
             return res.status(409).send({ message: 'Ya existe un usuario con este documento, email o número de registro de empresa.' });
         }
         if (e.name === 'ValidationError') {
+            // Error de validación de Mongoose
             return res.status(400).send({ message: `Error de validación: ${e.message}` });
         }
+        // Error genérico
         return res.status(500).send({ message: 'Error interno del servidor al crear el usuario.' });
     }
 };
@@ -169,7 +172,7 @@ export const signIn = async (req: Request, res: Response): Promise<Response> => 
 
     try {
         const user = await User.findOne({ email });
-        if (!user || user.deleted) { 
+        if (!user || user.deleted) {
             logger.warn(`Sign-in failed for email '${email}': User does not exist or is deleted.`);
             return res.status(401).send({ message: 'El usuario no existe o ha sido deshabilitado' });
         }
@@ -186,9 +189,8 @@ export const signIn = async (req: Request, res: Response): Promise<Response> => 
         }
 
         const expiresIn = 7 * 24 * 60 * 60; // 7 días para el Access Token
-        
+
         // ✅ Uso de la función interna refactorizada
-        console.log('Generating verification token for user:', user);
         const accessToken = await generateAuthToken(user, expiresIn);
 
         const userResponse = {
@@ -209,14 +211,13 @@ export const signIn = async (req: Request, res: Response): Promise<Response> => 
 export const updateUser = async (req: Request, res: Response): Promise<Response> => {
     const requestUser: any = req.user;
 
-    // 1. Autorización: Permite al ADMIN o STORE (Vendedor/Tienda) realizar la actualización
-    const allowedRoles = [UserRole.ADMIN, UserRole.STORE]; // Asumiendo que 'Vendedor' es UserRole.STORE
-    if (!requestUser || !allowedRoles.includes(requestUser.role)) { 
+    // 1. Autorización: Permite al ADMIN o SELLER (Vendedor/Tienda) realizar la actualización
+    const allowedRoles = [UserRole.ADMIN, UserRole.SELLER]; // Asumiendo que 'Vendedor' es UserRole.STORE
+    if (!requestUser || !allowedRoles.includes(requestUser.role)) {
         logger.warn(`Update user failed: Unauthorized attempt by user with role '${requestUser?.role}'.`);
-        return res.status(403).send({ message: "Usuario No autorizado, solo permitido para roles Admin o Vendedor/Tienda" });
+        return res.status(403).send({ message: "Usuario No autorizado, solo permitido para roles Admin o Vendedor" });
     }
 
-    console.log('Update user request body:', req.body); // Debugging line to inspect request body
     const { id, ...updateFields } = req.body; // Captura el ID y el resto de campos (incluidos todos los opcionales)
 
     // 2. Validación de ID
@@ -231,10 +232,10 @@ export const updateUser = async (req: Request, res: Response): Promise<Response>
             logger.warn(`Update user failed: User with ID ${id} not found.`);
             return res.status(404).send({ message: `No existe el usuario con ID: ${id}` });
         }
-        
+
         // 3. Objeto de Actualización (Contiene todos los campos que se enviaron)
         const updatedUserData: Record<string, any> = updateFields;
-        
+
         // 4. Validación de Unicidad de Email (si se proporciona)
         if (updatedUserData.email && updatedUserData.email !== findCustomer.email) {
             const emailExists = await User.findOne({ email: updatedUserData.email, _id: { $ne: id } });
@@ -242,7 +243,7 @@ export const updateUser = async (req: Request, res: Response): Promise<Response>
                 return res.status(409).send({ message: `El email '${updatedUserData.email}' ya está en uso por otro usuario.` });
             }
         }
-        
+
         // 6. Validación de Caracteres de Nombres/Apellidos (si se proporcionan)
         if (updatedUserData.names) {
             if (!(await validStrField(updatedUserData.names))) {
@@ -250,7 +251,7 @@ export const updateUser = async (req: Request, res: Response): Promise<Response>
                 return res.status(400).send({ message: `El campo de nombres tiene caracteres no válidos` });
             }
         }
-        
+
         if (updatedUserData.lastnames) {
             if (!(await validStrField(updatedUserData.lastnames))) {
                 logger.warn(`Update user failed: Invalid characters in lastnames for user ID: ${id}.`);
@@ -259,11 +260,11 @@ export const updateUser = async (req: Request, res: Response): Promise<Response>
         }
 
         // 7. Ejecución de la Actualización: Se aplica $set a todos los campos enviados.
-        const updatedUser = await User.findByIdAndUpdate(id, { $set: updatedUserData }, { 
+        const updatedUser = await User.findByIdAndUpdate(id, { $set: updatedUserData }, {
             new: true,
             runValidators: true // Aplica validadores de Mongoose (esencial para rangos numéricos y tipos)
         });
-        
+
         // 8. Respuesta
         if (updatedUser) {
             logger.info(`User ID ${id} updated successfully by admin/store.`);
@@ -303,8 +304,14 @@ export const listUsers = async (req: Request, res: Response): Promise<Response> 
 
 export const listUsersProject = async (req: Request, res: Response): Promise<Response> => {
     logger.info('Fetching list of users with projected fields.');
+    const requestUser: any = req.user;
+    const objFilter: any = { deleted: false };
+    if (requestUser.role === UserRole.SELLER) {
+        objFilter['sellerIds'] = requestUser._id;
+        objFilter['role'] = UserRole.STORE;
+    }
     try {
-        const users = await User.find({ deleted: false }, { // Solo listar usuarios no borrados
+        const users = await User.find(objFilter, { // Solo listar usuarios no borrados
             names: 1,
             lastnames: 1,
             document: 1,
@@ -326,30 +333,63 @@ export const listUsersProject = async (req: Request, res: Response): Promise<Res
 };
 
 export const usersByFilterProject = async (req: Request, res: Response): Promise<Response> => {
-    logger.info(`Fetching users by filter with projection. Filters: ${JSON.stringify(req.body)}`);
+
+    const ALLOWED_PROJECTION_FIELDS = [
+        'names',
+        'lastnames',
+        'document',
+        'phone',
+        'address',
+        'city',
+        'department',
+        'email',
+        'role',
+        'ranking',
+        'businessName',
+        'commissionPercentage',
+        'assignedStores',
+    ];
+
     try {
-        const filters = req.body;
-        // Solo buscar usuarios no borrados
-        const users = await User.find({ ...filters, deleted: false }, { 
-            names: 1,
-            lastnames: 1,
-            document: 1,
-            phone: 1,
-            address: 1,
-            city: 1,
-            department: 1,
-            email: 1,
-            role: 1,
-            ranking: 1,
-            businessName: 1
-        }).sort({ names: 1 });
+        const { filters, projection: requestedProjection } = req.body;
+
+        logger.info(`Fetching users by filter. Filters: ${JSON.stringify(filters)}. Requested Projection: ${JSON.stringify(requestedProjection)}`);
+
+        // 1. Manejo y validación de la proyección (campos a devolver)
+        let projection: any = {};
+        if (Array.isArray(requestedProjection)) {
+            requestedProjection.forEach(field => {
+                if (ALLOWED_PROJECTION_FIELDS.includes(field)) {
+                    // Mongoose projection format: { field: 1 }
+                    projection[field] = 1;
+                }
+            });
+        }
+
+        // Si no se solicita ninguna proyección válida, usamos una proyección mínima por defecto.
+        if (Object.keys(projection).length === 0) {
+            projection = { names: 1, lastnames: 1, email: 1, role: 1, document: 1 };
+            logger.info('Using default minimum projection due to invalid or empty request.');
+        }
+
+        // 2. Construcción de los criterios de búsqueda (Filtros)
+        // Se añade 'deleted: false' para exclusión segura de borrados lógicos.
+        const searchCriteria = { ...filters, deleted: false };
+        console.log('Search Criteria:', searchCriteria);
+
+        // 3. Ejecución de la consulta
+        // El método .find() recibe los criterios y la proyección
+        const users = await User.find(searchCriteria, projection)
+            .sort({ names: 1 }); // Ejemplo de ordenamiento
 
         if (users) {
             logger.info(`Users found by filter: ${users.length}`);
         } else {
-            logger.info(`No user found matching filters: ${JSON.stringify(filters)}`);
+            logger.info(`No user found matching criteria.`);
         }
+
         return res.status(200).json(users);
+
     } catch (error: any) {
         logger.error(`Error fetching users by filter: ${error.message}`, error);
         return res.status(500).json({ message: "Error interno del servidor al buscar usuarios por filtro." });

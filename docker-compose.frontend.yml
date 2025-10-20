@@ -3,18 +3,18 @@ version: '3.8'
 
 services:
   # Frontend del sistema AMAS (no-SSR)
-  amasfront:
-    image: amasfront
-    container_name: amasfront
-    build: /disk1/amas/amasFrontendPlatform
+  donmariofrontend:
+    image: donmariofrontend
+    container_name: donmariofrontend
+    build: /disk1/donmario/DonMario
     restart: always
     expose:
-      - "8080"
+      - "8085"
     environment:
-      - VIRTUAL_HOST=amass.com.co
-      - LETSENCRYPT_HOST=amass.com.co
+      - VIRTUAL_HOST=amas.com.co
+      - LETSENCRYPT_HOST=amas.com.co
       - LETSENCRYPT_EMAIL=soporteti@amass.com.co
-      - VIRTUAL_PORT=8080
+      - VIRTUAL_PORT=8085
       - VIRTUAL_PATH=/
     networks:
       - web

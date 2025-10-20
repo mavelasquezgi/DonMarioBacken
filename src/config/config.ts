@@ -3,9 +3,9 @@ export default {
     jwtSecret: process.env.JWT_SECRET || '26e84f92066bb21f5690ee602160a53dd0e515ef80af9e3dc1f9b9f50993a53f',
     jwtRefresh: process.env.JWT_SECRET || '1e81e9e9fc28a531933b5f421132ab1cb61b55c25c8cc1937504dc4ed29fed0b',
     TokenByAccesss: process.env.AT_SECRET || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IlptVnNhV05wZEdGamFXOXVaWE1zSUcxbElHaGhjeUJrWlhOamRXSnBaWEowYnl3Z1lXd2dabWx1WVd3Z2JtOGdaWE1nZEdGdUlITmxaM1Z5Ync9PSIsImlhdCI6MTY3NzYzMjU1MiwiZXhwIjoxZSs5NiwiYXVkIjoiWm1Wc2FXTnBkR0ZqYVc5dVpYTXNJRzFsSUdoaGN5QmtaWE5qZFdKcFpYSjBieXdnWVd3Z1ptbHVZV3dnYm04Z1pYTWdkR0Z1SUhObFozVnlidz09IiwiaXNzIjoiYW1hc3MuY29tLmNvIn0.hl4zIgRmtOxOgOV6P4W3XY1DtB957m-H6evkBJhmeoY',
+    PORT: process.env.PORT || 3501,
     DB: {
         URI: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/donmario',
-        //URI: process.env.MONGODB_URI || 'mongodb://database:27017/amas', //'mongodb+srv://admindbtest:Admin123*@cluster0.wq5g5.mongodb.net/amas?retryWrites=true&w=majority',
         USER: process.env.MONGODB_USER || 'adminamasmario',
         PASSWORD: process.env.MONGODB_PASSWORD || 'pwdAmasMario2025',
     },
@@ -23,7 +23,7 @@ export default {
 
     },
     HOST: {
-        URL: process.env.URL_HOST || 'http://localhost:3500/api',
+        URL: process.env.URL_HOST || 'http://localhost:3501/api',
     },
     COMPANY: {
         NAME: process.env.NAME_COMPANY || 'Manuel Fernando Velasquez Giraldo',
@@ -36,7 +36,7 @@ export default {
     },
     EXTERNAL_API: {
         //PYTHONSCRIPTS: process.env.PYTHONSCRIPTS || '/home/mauro/Documents/amas/scripts/pythonScripts',
-        PYTHONSCRIPTS: process.env.PYTHONSCRIPTS || '/home/mauro/Documents/git/amasBackend/scripts/pythonScripts'
+        PYTHONSCRIPTS: process.env.PYTHONSCRIPTS || '/home/mauro/Documents/git/DonMarioBacken/scripts/pythonScripts'
     }
 
 }
